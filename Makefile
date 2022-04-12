@@ -20,7 +20,7 @@ else
 MYFLAGS := -std=gnu99 -O2 -Wall -Wl,-E $(IPATH) 
 endif
 
-LIBS= -llua $(LPATH) -ldl -lm
+LIBS= -llua $(LPATH) -ldl -lm -lpthread
 HEADER = $(wildcard src/*.h)
 SRCS= $(wildcard src/*.c)
 BINROOT= vscext/bin/$(PLAT)

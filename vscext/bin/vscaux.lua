@@ -1,14 +1,10 @@
---[[
-    与VSCode通讯的模块
-    by colin
-]]
 local cjson = require "cjson"
 local vscaux = {}
 local seq = 0
 
 -- 发送消息
 function vscaux.send(msg)
-    local output = io.stdout
+    local output = io.stdout                        --控制台io
     local ok, content = pcall(cjson.encode, msg)
     if ok then
         local data = string.format("Content-Length: %s\r\n\r\n%s\n", #content, content)
@@ -34,15 +30,6 @@ end
 -- 获得请求
 function vscaux.recv_request()
     local input = io.stdin
-    -- -- TODO 测试
-    -- local msg = input:read()
-    -- local ok, req = pcall(cjson.decode, msg)
-    -- if ok then
-    --     return req
-    -- else
-    --     print(req)
-    -- end
-    -- do return end
 
     local header = input:read()
     if header:find("Content-Length: ", 1, true) then

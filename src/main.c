@@ -49,12 +49,12 @@ static void debuglog(const char* format, ...) {
 }
 
 static int sigign() {
-	struct sigaction sa;
-	sa.sa_handler = SIG_IGN;
-	sa.sa_flags = 0;
-	sigemptyset(&sa.sa_mask);
-	sigaction(SIGHUP, &sa, 0);
-	return 0;
+    struct sigaction sa;
+    sa.sa_handler = SIG_IGN;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGHUP, &sa, 0);
+    return 0;
 }
 
 static void change_workdir(const char *path) {
@@ -94,7 +94,7 @@ static bool run_script(lua_State *L) {
 }
 
 static void run_skynet(const char *workdir, const char *skynet, const char *config, const char *service,
-	bool debug, const char *breakpoints) {
+                       bool debug, const char *breakpoints) {
     if (debug)
         setenv("vscdbg_open", "on", 1);
     else
@@ -102,22 +102,40 @@ static void run_skynet(const char *workdir, const char *skynet, const char *conf
 
     setenv("vscdbg_workdir", workdir, 1);
     setenv("vscdbg_bps", breakpoints, 1);
-	setenv("vscdbg_service", service, 1);
+    setenv("vscdbg_service", service, 1);
 
-	debuglog("workdir: %s\n", workdir);
-	debuglog("skynet path: %s\n", skynet);
-	debuglog("config path: %s\n", config);
-	debuglog("service path: %s\n", service);
+    debuglog("workdir: %s\n", workdir);
+    debuglog("config path: %s\n", config);
+    debuglog("service path: %s\n", service);
 
     if (chdir(workdir) != 0) {
-		error_exit("run_skynet - chdir: %s\n", strerror(errno));
-	}
-
+        error_exit("run_skynet - chdir: %s\n", strerror(errno));
+    }
+//    return;
     execl(skynet, skynet, config, NULL);
     error_exit("execl: %s\n", strerror(errno));
 }
 
+int runSocket(lua_State *L)
+{
+    int err = (luaL_loadfile(L, "../socketserver.lua") || lua_pcall(L, 0, 6, 0));
+    if (err) {
+        fprintf(logger, "%s\n", lua_tostring(L, -1));
+        return false;
+    }
+}
+void *thr_fn(void *arg)
+{
+    lua_State *L = luaL_newstate();
+    luaL_openlibs(L);
+    init_lua_path(L);
+    runSocket(L);
+    lua_close(L);
+}
+
+#include<pthread.h>
 int main(int argc, char const *argv[]) {
+
     sigign();
     if (argc > 0)
         change_workdir(argv[0]);
@@ -127,14 +145,19 @@ int main(int argc, char const *argv[]) {
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
     init_lua_path(L);
+    pthread_t ntid;
+    pthread_create(&ntid,NULL,thr_fn,NULL);
     if (!run_script(L)) {
         error_exit("script error\n");
     }
-
+    debuglog("argc: %d",argc);
+    for (int i = 0 ; i< argc;i++){
+        debuglog("what  the fuck %s\n",argv[i]);
+    }
     const char *workdir = lua_tostring(L, -6);
-	const char *skynet = lua_tostring(L, -5);
+    const char *skynet = lua_tostring(L, -5);
     const char *config = lua_tostring(L, -4);
-	const char *service = lua_tostring(L, -3);
+    const char *service = lua_tostring(L, -3);
     bool debug = lua_toboolean(L, -2);
     const char *breakpoints = lua_tostring(L, -1);
 
@@ -147,10 +170,11 @@ int main(int argc, char const *argv[]) {
             error_exit("wait: %s\n", strerror(errno));
         debuglog("child exit: %d\n", state);
     } else {
-		debuglog("run_skynet\n");
+        debuglog("run_skynet\n");
         run_skynet(workdir, skynet, config, service, debug, breakpoints);
     }
 
+
     lua_close(L);
-    return 0;  
+    return 0;
 }
