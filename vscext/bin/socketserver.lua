@@ -5,8 +5,8 @@
 ---
 
 
-package.cpath=package.cpath..";../luasocket/core.so"
-local socket = require("socket")
+package.cpath=package.cpath..";../socket/core.so"
+local socket = require("socket.socket")
 
 
 local host, port = "127.0.0.1", 9090
